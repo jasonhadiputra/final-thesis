@@ -17,7 +17,7 @@ theme <- theme_light() +
     text=element_text(colour='black', size=14)
   )
 
-base_dir <- r"{G:\.shortcut-targets-by-id\1_UrMWiRHhBVY6BmkXpUmghuXVDupcUm8\Jason\}"
+base_dir <- r"{G:\.shortcut-targets-by-id\1_UrMWiRHhBVY6BmkXpUmghuXVDupcUm8\Jason\Notebooks\Final\}"
 df <- read_excel(paste(base_dir, r"{Datasets\Medical Cost Personal.xlsx}", sep=""))
 
 
@@ -34,7 +34,7 @@ df <- df %>%
   ))
 
 
-### ESTIMASI PARAMETER DISTRIBUSI GAMMA
+### DISTRIBUSI GAMMA
 (est_gamma <- fitdist(y / 1000, "gamma", method='mle')$estimate)
 est_gamma['rate'] <- est_gamma['rate'] / 1000
 
@@ -52,7 +52,7 @@ library(goftest)
 cvm.test(y, "pgamma", shape=est_shape, rate=est_rate)
 
 
-### ESTIMASI PARAMETER DISTRIBUSI INVERSE GAUSSIAN
+### DISTRIBUSI INVERSE GAUSSIAN
 (est_ig <- fitdist(y / 1e6, "invgauss", method='mle', start = list(mean = 5, shape = 1))$estimate)
 est_ig['mean'] <- est_ig['mean'] * 1e6
 est_ig['shape'] <- est_ig['shape'] * 1e6
@@ -70,12 +70,12 @@ library(goftest)
 cvm.test(y, "pinvgauss", mean=est_mean, shape=est_shape)
 
 
-### ESTIMASI PARAMETER DISTRIBUSI TWEEDIE
+### DISTRIBUSI TWEEDIE
 
 library(statmod)
 library(tweedie)
 out <- tweedie.profile(y~1,
-                       p.vec=seq(2, 3, by=0.1),
+                       p.vec=seq(2, 3, by=0.01),
                        do.smooth=TRUE)
 
 est_p <- out$p.max
@@ -84,7 +84,7 @@ est_phi <- out$phi.max
 est_mu <- mean(y)
 (est_tweedie <- list(xi=est_p, phi=est_phi, mu=est_mu))
 
-# Plot profiling
+# Plot profile log-likelihood
 (plot <- ggplot() +
     geom_line(aes(x=out$x, y=out$y), linewidth=linewidth, colour='#4c72b0') +
     geom_point(aes(x=out$p, y=out$L), size=3, colour='#4c72b0') +
@@ -94,7 +94,7 @@ est_mu <- mean(y)
     labs(x='p index (95% confidence interval)', y='Log-likelihood') +
     theme)
 
-plot + ggsave(paste(base_dir, r"{Pictures\profile log likelihood.png}", sep=""), width=15, height=9, units='cm', dpi=600)
+plot + ggsave(paste(base_dir, r"{..\..\Pictures\profile log likelihood.png}", sep=""), width=15, height=9, units='cm', dpi=600)
 
 # uji Kolmogorov-Smirnov
 library(goftest)
@@ -106,15 +106,16 @@ library(goftest)
 cvm.test(y, "ptweedie", xi=out$p.max, mu = mean(y),
          phi=out$phi.max, power=out$p.max)
 
-### PLOTTING DISTRIBUSI
 
+
+### PLOTTING DISTRIBUSI
 
 # PDF No Tweedie
 (plot <- ggplot() +
-    geom_histogram(aes(x=y, y=..density..), bins=30, alpha=0.8, fill="#8c8c8c", colour="white") +
+    geom_histogram(aes(x=y, y=after_stat(density)), bins=30, alpha=0.8, fill="#8c8c8c", colour="white") +
     geom_function(aes(colour='Gamma'), fun=dgamma, args=est_gamma, linewidth=linewidth, n=1000) +
     geom_function(aes(colour='IG'), fun=dinvgauss, args=est_ig, linewidth=linewidth, n=1000) +
-    labs(x='Besar premi (USD)', y='Fungsi kepadatan peluang') +
+    labs(x='Besar premi (USD)', y='Density') +
     scale_colour_manual(
       name='Distribusi',
       breaks=c('Gamma', 'IG', 'Tweedie', 'Empiris'),
@@ -124,7 +125,7 @@ cvm.test(y, "ptweedie", xi=out$p.max, mu = mean(y),
     theme
     )
 
-plot + ggsave(paste(base_dir, r"{Pictures\pdf gamma, ig, no tweedie.png}", sep=""), width=15, height=9, units='cm', dpi=600)
+plot + ggsave(paste(base_dir, r"{..\..\Pictures\pdf gamma, ig, no tweedie.png}", sep=""), width=15, height=9, units='cm', dpi=600)
 
 # CDF No Tweedie
 (plot <- ggplot() +
@@ -141,17 +142,16 @@ plot + ggsave(paste(base_dir, r"{Pictures\pdf gamma, ig, no tweedie.png}", sep="
     coord_cartesian(ylim = c(0, NA), expand=FALSE) +
     theme)
 
-plot + ggsave(paste(base_dir, r"{Pictures\cdf gamma, ig, no tweedie.png}", sep=""), width=15, height=9, units='cm', dpi=600)
-
+plot + ggsave(paste(base_dir, r"{..\..\Pictures\cdf gamma, ig, no tweedie.png}", sep=""), width=15, height=9, units='cm', dpi=600)
 
 
 # PDF Tweedie
 (plot <- ggplot() +
-    geom_histogram(aes(x=y, y=..density..), bins=30, alpha=0.8, fill="#8c8c8c", colour="white") +
+    geom_histogram(aes(x=y, y=after_stat(density)), bins=30, alpha=0.8, fill="#8c8c8c", colour="white") +
     geom_function(aes(colour='Gamma'), fun=dgamma, args=est_gamma, linewidth=linewidth, n=1000) +
     geom_function(aes(colour='IG'), fun=dinvgauss, args=est_ig, linewidth=linewidth, n=1000) +
     geom_function(aes(colour='Tweedie'), fun=dtweedie, args=est_tweedie, linewidth=linewidth, n=1000) +
-    labs(x='Besar premi (USD)', y='Fungsi kepadatan peluang') +
+    labs(x='Besar premi (USD)', y='Density') +
     scale_colour_manual(
       name='Distribusi',
       breaks=c('Gamma', 'IG', 'Tweedie', 'Empiris'),
@@ -161,10 +161,9 @@ plot + ggsave(paste(base_dir, r"{Pictures\cdf gamma, ig, no tweedie.png}", sep="
     theme
 )
 
-plot + ggsave(paste(base_dir, r"{Pictures\pdf gamma, ig, tweedie.png}", sep=""), width=15, height=9, units='cm', dpi=600)
+plot + ggsave(paste(base_dir, r"{..\..\Pictures\pdf gamma, ig, tweedie.png}", sep=""), width=15, height=9, units='cm', dpi=600)
 
-
-# Tweedie
+# CDF Tweedie
 (plot <- ggplot() +
     geom_function(aes(colour='Gamma'), fun=pgamma, args=est_gamma, linewidth=linewidth) +
     geom_function(aes(colour='IG'), fun=pinvgauss, args=est_ig, linewidth=linewidth) +
@@ -179,11 +178,13 @@ plot + ggsave(paste(base_dir, r"{Pictures\pdf gamma, ig, tweedie.png}", sep=""),
     coord_cartesian(ylim = c(0, NA), expand=FALSE) +
     theme)
 
-plot + ggsave(paste(base_dir, r"{Pictures\cdf gamma, ig, tweedie.png}", sep=""), width=15, height=9, units='cm', dpi=600)
+plot + ggsave(paste(base_dir, r"{..\..\Pictures\cdf gamma, ig, tweedie.png}", sep=""), width=15, height=9, units='cm', dpi=600)
 
 
-### PARTISI DATA
 
+### MODELING
+
+# Train test split
 set.seed(17)
 data_shuff <- df[sample(nrow(df)), ]
 # write_csv(data_shuff, r"{G:\.shortcut-targets-by-id\1_UrMWiRHhBVY6BmkXpUmghuXVDupcUm8\Jason\Datasets\Shuffled Medical Cost Personal.csv}")
@@ -191,10 +192,9 @@ training_index <- seq(1, nrow(df)*0.8, 1)
 train_data <- data_shuff[training_index, ]
 test_data <- data_shuff[-training_index, ]
 
+test_data
 
-
-### PENENTUAN BASE LEVEL
-
+# Penentuan base level
 library(dplyr)
 train_data <- train_data %>%
   mutate(sex = relevel(factor(sex), ref = "male"))
@@ -205,7 +205,8 @@ train_data <- train_data %>%
 train_data <- train_data %>%
   mutate(bmi2 = relevel(factor(bmi3), ref = "class I obese"))
 
-### PEMODELAN
+
+## Backward elimination
 # Full
 mod1 <- glm(charges ~ age + sex + bmi3 + children + smoker + region,
             data = train_data,
@@ -216,7 +217,7 @@ AICtweedie(mod1)
 mod2 <- glm(charges ~ age + bmi3 + children + smoker + region,
             data = train_data,
             family = tweedie(var.power = est_p, link.power = 0))
-summary(mod2, dispersion=est_phi)
+summary(mod2, dispersion=est_phi) # mod2 adalah model terbaik
 AICtweedie(mod2)
 # Remove region
 mod3 <- glm(charges ~ age + sex + bmi3 + children + smoker,
@@ -224,18 +225,53 @@ mod3 <- glm(charges ~ age + sex + bmi3 + children + smoker,
             family = tweedie(var.power = est_p, link.power = 0))
 summary(mod3, dispersion=est_phi)
 AICtweedie(mod3)
-
 # Remove both
 mod4 <- glm(charges ~ age + bmi3 + children + smoker,
             data = train_data,
             family = tweedie(var.power = est_p, link.power = 0))
 AICtweedie(mod4)
-summary(mod4, dispersion = est_phi) # mod2 adalah model terbaik
+summary(mod4, dispersion = est_phi) 
 
 y <- train_data$charges
 y_pred <- exp(predict(mod2, dispersion = est_phi, train_data))
 
 sum(tweedie.dev(y, y_pred, est_p))
+
+## Forward selection
+# charges ~ age + sex + bmi3 + children + smoker + region
+modf1 <- glm(charges ~ 1,
+            data = train_data,
+            family = tweedie(var.power = est_p, link.power = 0))
+summary(modf1)
+AICtweedie(modf1)
+
+modf2 <- glm(charges ~ smoker,
+             data = train_data,
+             family = tweedie(var.power = est_p, link.power = 0))
+AICtweedie(modf2)
+
+modf3 <- glm(charges ~ smoker + age,
+             data = train_data,
+             family = tweedie(var.power = est_p, link.power = 0))
+AICtweedie(modf3)
+
+modf4 <- glm(charges ~ smoker + age + children,
+             data = train_data,
+             family = tweedie(var.power = est_p, link.power = 0))
+AICtweedie(modf4)
+
+modf5 <- glm(charges ~ smoker + age + children + bmi3,
+             data = train_data,
+             family = tweedie(var.power = est_p, link.power = 0))
+AICtweedie(modf5)
+
+modf6 <- glm(charges ~ smoker + age + children + bmi3 + region,
+             data = train_data,
+             family = tweedie(var.power = est_p, link.power = 0))
+summary(modf6)
+AICtweedie(modf6)
+
+
 
 ### PENGHITUNGAN NILAI RMSE PADA TEST SET
 
@@ -243,3 +279,14 @@ actual <- test_data$charges
 pred <- exp(predict(mod2, dispersion = est_phi, test_data))
 mse <- mean((actual-pred)^2)
 (rmse <- sqrt(mse))
+
+### CONTOH PREDIKSI
+sample <- tibble(
+  age = c(19, 19, 24, 29, 49, 69, 29, 29, 29, 29, 29, 29),
+  sex = c('male', 'female', 'male', 'male', 'male', 'male', 'male', 'male', 'male', 'male', 'male', 'male'),
+  children = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3),
+  smoker = c('no', 'no', 'no', 'no', 'no', 'no', 'yes', 'no', 'no', 'no', 'no', 'no'),
+  region = c('southwest', 'southwest', 'southwest', 'southwest', 'southwest', 'southwest', 'southwest', 'southwest', 'southwest', 'southwest', 'southwest', 'southwest'),
+  bmi3 = c('overweight', 'overweight', 'overweight', 'overweight', 'overweight', 'overweight', 'overweight', 'healthy', 'class I obese', 'overweight', 'overweight', 'overweight'),
+  )
+exp(predict(mod2, dispersion = est_phi, sample))
